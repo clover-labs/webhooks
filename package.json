@@ -1,0 +1,10 @@
+{
+  "name": "clab-webhooks",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun src/index.ts",
+    "dev": "bun --watch src/index.ts"
+  }
+}
