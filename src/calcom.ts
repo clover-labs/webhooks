@@ -1,12 +1,12 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { createCompany, createOpportunity, createNoteForOpportunity } from "./twenty.ts";
 
 /**
  * Cal.com signs webhook bodies with HMAC-SHA256 (hex digest) of the raw request
- * body, sent in the `X-Cal-Signature-256` header. NOT independently verified
- * against a real Cal.com payload yet — confirm header name + digest format via
- * the "Ping test" button on the webhook (Settings > Webhooks) before relying on
- * this in production. If verification starts rejecting everything, log the
- * actual header name/value seen and compare against Cal.com's current docs.
+ * body, sent in the `X-Cal-Signature-256` header. Confirmed live 2026-08-03 via
+ * Cal.com's own "Ping test" (passed, status 200) and a real signed test payload
+ * against the production endpoint (docs/_notes/webhooks-testing-shaping.md) —
+ * not just assumed from docs anymore.
  */
 export function verifySignature(rawBody: string, signatureHeader: string | null, secret: string): boolean {
   if (!signatureHeader) return false;
@@ -69,4 +69,87 @@ export function extractCustomAnswers(responses: Record<string, CalcomResponseVal
     lines.push(`${resp.label ?? key}: ${value}`);
   }
   return lines.join("\n");
+}
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+/**
+ * Pure request handler — takes its config as parameters rather than reading
+ * process.env directly, so it's directly unit-testable (see calcom.test.ts)
+ * without needing index.ts's Bun.serve() to be running.
+ */
+export async function handleCalcomBooking(
+  req: Request,
+  config: { webhookSecret: string; projectId?: string },
+): Promise<Response> {
+  // Must verify against the *raw* body text — re-serializing parsed JSON
+  // before hashing would not match Cal.com's signature.
+  const rawBody = await req.text();
+  const signature = req.headers.get("x-cal-signature-256");
+  if (!verifySignature(rawBody, signature, config.webhookSecret)) {
+    console.error(`Calcom webhook: signature mismatch (header present: ${signature !== null})`);
+    return jsonResponse(401, { ok: false, error: "invalid signature" });
+  }
+
+  let payload: CalcomBookingPayload;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return jsonResponse(400, { ok: false, error: "invalid JSON body" });
+  }
+
+  if (payload.triggerEvent !== "BOOKING_CREATED") {
+    return jsonResponse(200, { ok: true, skipped: `triggerEvent ${payload.triggerEvent} not handled` });
+  }
+
+  const attendee = payload.payload?.attendees?.[0];
+  if (!attendee?.email || !attendee?.name) {
+    return jsonResponse(400, { ok: false, error: "booking payload missing attendee name/email" });
+  }
+
+  const domain = attendee.email.split("@")[1];
+
+  try {
+    const company = await createCompany({
+      name: attendee.name,
+      domain,
+      // Booked through the public website widget with no referrer field on
+      // the form — defaulting to INBOUND. Founders should reclassify to
+      // REFERRAL or ORGANIC during Qualify once they know which it is; the
+      // webhook has no way to tell those apart on its own.
+      leadSource: "INBOUND",
+      projectId: config.projectId,
+    });
+
+    const opportunity = await createOpportunity({
+      name: `${attendee.name} — Free Consultation`,
+      companyId: company.id,
+      stage: "AWARENESS",
+      projectId: config.projectId,
+      // dealType intentionally left unset — the booking doesn't say which
+      // service line this is; the founder sets it during Qualify.
+    });
+
+    const customAnswers = extractCustomAnswers(payload.payload.responses);
+    const noteLines = [
+      `Booked via cloverlabs.io: "${payload.payload.title}"`,
+      `Start time: ${payload.payload.startTime}`,
+      customAnswers,
+    ].filter(Boolean);
+    await createNoteForOpportunity({
+      title: "Cal.com booking",
+      markdown: noteLines.join("\n\n"),
+      opportunityId: opportunity.id,
+    });
+
+    return jsonResponse(200, { ok: true, companyId: company.id, opportunityId: opportunity.id });
+  } catch (err) {
+    console.error("Calcom booking -> Twenty CRM failed:", err);
+    return jsonResponse(502, { ok: false, error: err instanceof Error ? err.message : String(err) });
+  }
 }

@@ -4,23 +4,24 @@
  * whatever booking context doesn't fit a structured field.
  *
  * Field names and enum values below were confirmed live against
- * GET {TWENTY_API_URL}/metadata/objects (2026-08-03), NOT guessed:
+ * GET {TWENTY_API_URL}/metadata/objects (2026-08-03) — see
+ * scripts/check-twenty-schema.ts to re-verify these haven't drifted:
  *   Company.leadSource     FOUNDER_NETWORK | REFERRAL | COLD_OUTREACH | INBOUND | OTHER | ORGANIC
  *   Company.lifecycleStage PROSPECT | ONBOARDING | ADOPTION | EXPANSION | RENEWED | CHURNED
  *   Opportunity.stage      AWARENESS | EDUCATION | SELECTION | COMMITMENT | WON | LOST
  *   Opportunity.dealType   APP_DEVELOPMENT | SOCIAL_MEDIA_MANAGEMENT | PILOT
  *
- * One thing NOT verified live: the exact JSON envelope a POST mutation
- * returns (assumed to mirror Twenty's documented `{ data: { create<Type>: {...} } }`
- * shape, matching how GETs already work in ceo/_scripts/crm.ts and
- * code/gtm/src/twenty.ts). Deliberately not tested with a real POST here —
- * that would create throwaway records in the live production CRM. The first
- * real webhook delivery is the real test; parsing below throws a clear,
- * debuggable error (including the raw response) if the shape doesn't match
- * rather than silently returning `undefined`.
+ * The mutation response envelope (`{ data: { create<Type>: {...} } }`) was
+ * confirmed live too, via scripts/test-live-calcom-booking.ts (see
+ * docs/_notes/webhooks-testing-shaping.md) — that script targets
+ * TEST_PROJECT_ID instead of CLB_PROJECT_ID, so live end-to-end checks don't
+ * touch real reporting: ceo/_scripts/crm.ts already filters everything to
+ * `projectId === CLB_PROJECT_ID`, so Test-project records are invisible to
+ * it by construction, not by remembering to delete them afterward.
  */
 
-const CLB_PROJECT_ID = "3aa6e453-b041-4891-8089-3f9c00b2a62c"; // see ceo/_scripts/crm.ts
+export const CLB_PROJECT_ID = "3aa6e453-b041-4891-8089-3f9c00b2a62c"; // see ceo/_scripts/crm.ts
+export const TEST_PROJECT_ID = "e60f457f-cd37-467b-a493-8fdb91b4eb41"; // "Test" project, created 2026-08-03 for live-but-safe checks
 
 export type LeadSource = "FOUNDER_NETWORK" | "REFERRAL" | "COLD_OUTREACH" | "INBOUND" | "OTHER" | "ORGANIC";
 export type OpportunityStage = "AWARENESS" | "EDUCATION" | "SELECTION" | "COMMITMENT" | "WON" | "LOST";
@@ -56,12 +57,13 @@ export async function createCompany(opts: {
   name: string;
   domain?: string;
   leadSource: LeadSource;
+  projectId?: string; // defaults to CLB_PROJECT_ID — override only for live testing (TEST_PROJECT_ID)
 }): Promise<{ id: string }> {
   const body: Record<string, unknown> = {
     name: opts.name,
     leadSource: opts.leadSource,
     lifecycleStage: "PROSPECT",
-    projectId: CLB_PROJECT_ID,
+    projectId: opts.projectId ?? CLB_PROJECT_ID,
   };
   if (opts.domain) {
     body.domainName = { primaryLinkUrl: `https://${opts.domain}`, primaryLinkLabel: "" };
@@ -74,11 +76,13 @@ export async function createOpportunity(opts: {
   name: string;
   companyId: string;
   stage: OpportunityStage;
+  projectId?: string; // defaults to CLB_PROJECT_ID — see createCompany; Opportunity has its own project relation, doesn't inherit from Company
 }): Promise<{ id: string }> {
   const res = await api("POST", "/opportunities", {
     name: opts.name,
     companyId: opts.companyId,
     stage: opts.stage,
+    projectId: opts.projectId ?? CLB_PROJECT_ID,
   });
   return extractCreated(res, "createOpportunity");
 }
