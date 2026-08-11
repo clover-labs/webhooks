@@ -4,13 +4,13 @@
  * the one-off hand-signed curl from 2026-08-03. Sends a real signed
  * BOOKING_CREATED payload to the live production URL, tagged with
  * X-Test-Project-Id so it lands in Twenty's "Test" project instead of
- * Clover Labs (ceo/_scripts/crm.ts already excludes anything not tagged
+ * Clover Labs (code/tools/crm/crm.ts already excludes anything not tagged
  * CLB_PROJECT_ID from real reporting, so this is safe even if cleanup below
  * fails to run). Deletes the created records afterward regardless, to keep
  * the Test project tidy.
  *
  * Usage: bun scripts/test-live-calcom-booking.ts
- * Reads: docs/creds/calcom-webhook.env (CALCOM_WEBHOOK_SECRET)
+ * Reads: docs/creds/calcom.env (CALCOM_WEBHOOK_SECRET)
  *        docs/creds/twenty-crm.env (TWENTY_API_URL, TWENTY_API_TOKEN — to verify + clean up)
  */
 
@@ -47,9 +47,9 @@ async function twentyApi(method: string, path: string): Promise<any> {
 }
 
 async function main() {
-  loadCreds("calcom-webhook.env", "twenty-crm.env");
+  loadCreds("calcom.env", "twenty-crm.env");
   const secret = process.env.CALCOM_WEBHOOK_SECRET;
-  if (!secret) throw new Error("CALCOM_WEBHOOK_SECRET not set — check docs/creds/calcom-webhook.env");
+  if (!secret) throw new Error("CALCOM_WEBHOOK_SECRET not set — check docs/creds/calcom.env");
 
   const stamp = new Date().toISOString();
   const attendeeName = `TEST - Live Webhook Check (${stamp})`;
