@@ -1,0 +1,51 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "sub-bridge",
+  "scheduler": {
+    "tasks": {
+      "postPublish": {
+        "endpoint": "/internal/scheduler/post-publish"
+      }
+    }
+  },
+  "post": {
+    "dir": "public",
+    "entrypoints": {
+      "default": {
+        "inline": true,
+        "entry": "dashboard.html"
+      },
+      "compose": {
+        "entry": "compose.html"
+      },
+      "settings": {
+        "entry": "settings.html"
+      }
+    }
+  },
+  "server": {
+    "dir": "dist/server",
+    "entry": "index.js"
+  },
+  "menu": {
+    "items": [
+      {
+        "label": "Open SubBridge",
+        "description": "Create and schedule posts across subreddits",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/post-create"
+      }
+    ]
+  },
+  "triggers": {
+    "onAppInstall": "/internal/on-app-install"
+  },
+  "scripts": {
+    "dev": "node --experimental-strip-types ./tools/build.ts --watch",
+    "build": "node --experimental-strip-types ./tools/build.ts --minify"
+  },
+  "dev": {
+    "subreddit": "sub_bridge_dev"
+  }
+}

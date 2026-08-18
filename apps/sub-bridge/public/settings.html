@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" type="text/css" href="settings.css" />
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width, height=device-height, user-scalable=0"
+    />
+    <title>Settings — SubBridge</title>
+  </head>
+  <body class="app">
+    <div class="header">
+      <span class="header-title">Settings</span>
+      <button class="btn-secondary" id="cancel-btn">Cancel</button>
+    </div>
+
+    <div class="form">
+      <div class="field">
+        <label for="subreddits">Target Subreddits</label>
+        <p class="hint">One subreddit per line (e.g. r/Maribor)</p>
+        <textarea id="subreddits" placeholder="r/Maribor&#10;r/Slovenia&#10;r/Ljubljana" rows="6"></textarea>
+      </div>
+
+      <div class="error-msg" id="error-msg"></div>
+
+      <div class="footer">
+        <button type="button" class="btn-primary" id="save-btn">Save</button>
+      </div>
+    </div>
+
+    <script type="module" src="settings.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" type="text/css" href="compose.css" />
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width, height=device-height, user-scalable=0"
+    />
+    <title>Schedule Post — SubBridge</title>
+  </head>
+  <body class="app">
+    <div class="header">
+      <span class="header-title">Schedule Post</span>
+      <button class="btn-secondary" id="cancel-btn">Cancel</button>
+    </div>
+
+    <div class="form">
+      <div class="field">
+        <label for="title">Title</label>
+        <input type="text" id="title" placeholder="Post title" />
+      </div>
+
+      <div class="field">
+        <label for="body">Body</label>
+        <textarea id="body" placeholder="Post body (optional)"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Post to</label>
+        <div class="checkbox-list" id="subreddits">
+          <div class="loading">Loading subreddits…</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="scheduled-at">Schedule time</label>
+        <input type="datetime-local" id="scheduled-at" />
+      </div>
+
+      <div class="error-msg" id="error-msg"></div>
+
+      <div class="footer">
+        <button type="button" class="btn-primary" id="submit-btn">Schedule</button>
+      </div>
+    </div>
+
+    <script type="module" src="compose.js" defer></script>
+  </body>
+</html>
