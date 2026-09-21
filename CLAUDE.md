@@ -26,7 +26,7 @@ no separate build step. Env vars (`WEBHOOK_SECRET`, `REDDIT_CLIENT_ID`,
 ## Shared Context
 
 Reddit-specific projects (`apps/`) target the same Reddit accounts used by
-CLAB brands. Reddit OAuth credentials live in `creds/` or project-local
+CLAB brands. Reddit OAuth credentials live in `$CLAB_CREDS_DIR/reddit.env` (Infisical mirror, see `infra/bin/creds-pull`) or project-local
 `.env` files. Twenty CRM credentials for the `/calcom-booking` route are
 documented in `docs/creds/twenty-crm.env`.
 
