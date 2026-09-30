@@ -1,6 +1,6 @@
 import { test, expect, beforeEach, afterEach, describe } from "bun:test";
 import { createHmac } from "node:crypto";
-import { verifySignature, extractCustomAnswers, handleCalcomBooking } from "./calcom.ts";
+import { verifySignature, extractCustomAnswers, dealTypeFromResponses, handleCalcomBooking } from "./calcom.ts";
 
 const SECRET = "test-secret-do-not-use-in-prod";
 
@@ -62,9 +62,35 @@ describe("extractCustomAnswers", () => {
   });
 });
 
+// ── dealTypeFromResponses ───────────────────────────────────────────────────
+
+describe("dealTypeFromResponses", () => {
+  // Each booking must land on the right service line, or the offer test
+  // (AI apps vs. marketing vs. staff-aug) can't be read from the CRM.
+  const answer = (value: unknown) => ({ service: { label: "What do you need help with?", value } });
+
+  test("maps every build-type answer to APP_DEVELOPMENT", () => {
+    for (const v of ["AI apps / fix a vibe-coded app", "Build a new product (MVP)", "Extend my dev team"]) {
+      expect(dealTypeFromResponses(answer(v))).toBe("APP_DEVELOPMENT");
+    }
+  });
+
+  test("maps the marketing answer to SOCIAL_MEDIA_MANAGEMENT", () => {
+    expect(dealTypeFromResponses(answer("Market my product"))).toBe("SOCIAL_MEDIA_MANAGEMENT");
+  });
+
+  test("leaves 'Something else', unknown/renamed options and missing answers unset rather than guessing", () => {
+    expect(dealTypeFromResponses(answer("Something else"))).toBeUndefined();
+    expect(dealTypeFromResponses(answer("Social media management"))).toBeUndefined();
+    expect(dealTypeFromResponses(answer(["Market my product"]))).toBeUndefined();
+    expect(dealTypeFromResponses(undefined)).toBeUndefined();
+    expect(dealTypeFromResponses({})).toBeUndefined();
+  });
+});
+
 // ── handleCalcomBooking ──────────────────────────────────────────────────────
 
-function bookingPayload(overrides: Partial<{ triggerEvent: string; attendees: unknown[] }> = {}) {
+function bookingPayload(overrides: Partial<{ triggerEvent: string; attendees: unknown[]; service: string }> = {}) {
   return JSON.stringify({
     triggerEvent: overrides.triggerEvent ?? "BOOKING_CREATED",
     payload: {
@@ -76,6 +102,7 @@ function bookingPayload(overrides: Partial<{ triggerEvent: string; attendees: un
         name: { label: "Your name", value: "Jane Doe" },
         email: { label: "Email", value: "jane@example.com" },
         whatIsThisMeetingAbout: { label: "What is this meeting about?", value: "MVP build" },
+        ...(overrides.service ? { service: { label: "What do you need help with?", value: overrides.service } } : {}),
       },
     },
   });
@@ -181,6 +208,22 @@ describe("handleCalcomBooking", () => {
     expect(opportunityCall.body).not.toHaveProperty("dealType");
     expect(noteCall.body.bodyV2.markdown).toContain("What is this meeting about?: MVP build");
     expect(noteTargetCall.body).toMatchObject({ noteId: "note-1", targetOpportunityId: "opportunity-1" });
+  });
+
+  test("sets dealType from the booking's service answer and keeps the answer in the note", async () => {
+    mockTwentySuccess();
+    const body = bookingPayload({ service: "Market my product" });
+    const req = new Request("http://localhost/calcom-booking", {
+      method: "POST",
+      body,
+      headers: { "x-cal-signature-256": sign(body) },
+    });
+    const res = await handleCalcomBooking(req, { webhookSecret: SECRET });
+    expect(res.status).toBe(200);
+
+    const [, opportunityCall, noteCall] = calls;
+    expect(opportunityCall.body).toMatchObject({ stage: "AWARENESS", dealType: "SOCIAL_MEDIA_MANAGEMENT" });
+    expect(noteCall.body.bodyV2.markdown).toContain("What do you need help with?: Market my product");
   });
 
   test("passes a projectId override through to Company and Opportunity when given", async () => {

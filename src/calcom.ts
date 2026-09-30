@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { createCompany, createOpportunity, createNoteForOpportunity } from "./twenty.ts";
+import { createCompany, createOpportunity, createNoteForOpportunity, type DealType } from "./twenty.ts";
 
 /**
  * Cal.com signs webhook bodies with HMAC-SHA256 (hex digest) of the raw request
@@ -71,6 +71,27 @@ export function extractCustomAnswers(responses: Record<string, CalcomResponseVal
   return lines.join("\n");
 }
 
+/**
+ * Answers to the required "What do you need help with?" booking question
+ * (identifier `service`, added 2026-09-30) mapped to Opportunity.dealType, so
+ * bookings can be split by offer without the founder re-tagging each one.
+ * Keys must match the Cal.com option labels exactly — if an option is renamed
+ * in Cal.com, update it here too, or that answer silently stops setting a
+ * dealType (it still lands in the note via extractCustomAnswers).
+ * "Something else" is deliberately unmapped: the founder sets it during Qualify.
+ */
+const SERVICE_DEAL_TYPES: Record<string, DealType> = {
+  "AI apps / fix a vibe-coded app": "APP_DEVELOPMENT",
+  "Build a new product (MVP)": "APP_DEVELOPMENT",
+  "Extend my dev team": "APP_DEVELOPMENT",
+  "Market my product": "SOCIAL_MEDIA_MANAGEMENT",
+};
+
+export function dealTypeFromResponses(responses: Record<string, CalcomResponseValue> | undefined): DealType | undefined {
+  const value = responses?.service?.value;
+  return typeof value === "string" ? SERVICE_DEAL_TYPES[value.trim()] : undefined;
+}
+
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -130,9 +151,8 @@ export async function handleCalcomBooking(
       name: `${attendee.name} — Free Consultation`,
       companyId: company.id,
       stage: "AWARENESS",
+      dealType: dealTypeFromResponses(payload.payload.responses),
       projectId: config.projectId,
-      // dealType intentionally left unset — the booking doesn't say which
-      // service line this is; the founder sets it during Qualify.
     });
 
     const customAnswers = extractCustomAnswers(payload.payload.responses);

@@ -39,6 +39,7 @@ export type LeadSource = "FOUNDER_NETWORK" | "REFERRAL" | "COLD_OUTREACH" | "INB
 export type LifecycleStage = "PROSPECT" | "ONBOARDING" | "ADOPTION" | "EXPANSION" | "RENEWED" | "CHURNED";
 export type OpportunityStage = "AWARENESS" | "EDUCATION" | "SELECTION" | "COMMITMENT" | "WON" | "LOST";
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+export type DealType = "APP_DEVELOPMENT" | "SOCIAL_MEDIA_MANAGEMENT" | "PILOT";
 
 async function api(method: string, path: string, body?: unknown): Promise<any> {
   const url = `${process.env.TWENTY_API_URL}${path}`;
@@ -90,12 +91,14 @@ export async function createOpportunity(opts: {
   name: string;
   companyId: string;
   stage: OpportunityStage;
+  dealType?: DealType;
   projectId?: string; // defaults to CLB_PROJECT_ID — see createCompany; Opportunity has its own project relation, doesn't inherit from Company
 }): Promise<{ id: string }> {
   const res = await api("POST", "/opportunities", {
     name: opts.name,
     companyId: opts.companyId,
     stage: opts.stage,
+    ...(opts.dealType ? { dealType: opts.dealType } : {}),
     projectId: opts.projectId ?? CLB_PROJECT_ID,
   });
   return extractCreated(res, "createOpportunity");
