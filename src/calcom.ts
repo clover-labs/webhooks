@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { createCompany, createOpportunity, createNoteForOpportunity, type DealType } from "./twenty.ts";
+import { createCompany, createOpportunity, createNoteForOpportunity, findCompanyByDomain, type DealType } from "./twenty.ts";
 
 /**
  * Cal.com signs webhook bodies with HMAC-SHA256 (hex digest) of the raw request
@@ -92,6 +92,23 @@ export function dealTypeFromResponses(responses: Record<string, CalcomResponseVa
   return typeof value === "string" ? SERVICE_DEAL_TYPES[value.trim()] : undefined;
 }
 
+// Free-mail providers: the booker isn't "the gmail.com company". Setting these
+// as a Company domain claimed the domain for the first booker, and Twenty's
+// one-Company-per-domain rule then failed every later booking from it.
+const PERSONAL_EMAIL_DOMAINS = new Set([
+  "gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "live.com", "msn.com",
+  "yahoo.com", "ymail.com", "icloud.com", "me.com", "mac.com", "aol.com",
+  "proton.me", "protonmail.com", "gmx.com", "gmx.net", "gmx.de", "mail.com",
+  "zoho.com", "yandex.com", "hey.com", "fastmail.com", "siol.net", "t-2.net", "amis.net",
+]);
+
+/** The company domain for a booker's email, or undefined for free-mail addresses. */
+export function companyDomain(email: string): string | undefined {
+  const domain = email.split("@")[1]?.trim().toLowerCase();
+  if (!domain || PERSONAL_EMAIL_DOMAINS.has(domain)) return undefined;
+  return domain;
+}
+
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -133,19 +150,24 @@ export async function handleCalcomBooking(
     return jsonResponse(400, { ok: false, error: "booking payload missing attendee name/email" });
   }
 
-  const domain = attendee.email.split("@")[1];
+  const domain = companyDomain(attendee.email);
 
   try {
-    const company = await createCompany({
-      name: attendee.name,
-      domain,
-      // Booked through the public website widget with no referrer field on
-      // the form — defaulting to INBOUND. Founders should reclassify to
-      // REFERRAL or ORGANIC during Qualify once they know which it is; the
-      // webhook has no way to tell those apart on its own.
-      leadSource: "INBOUND",
-      projectId: config.projectId,
-    });
+    // Reuse the Company for a known business domain — creating a second one
+    // fails in Twenty and would lose the whole booking.
+    const existing = domain ? await findCompanyByDomain(domain) : null;
+    const company =
+      existing ??
+      (await createCompany({
+        name: attendee.name,
+        domain,
+        // Booked through the public website widget with no referrer field on
+        // the form — defaulting to INBOUND. Founders should reclassify to
+        // REFERRAL or ORGANIC during Qualify once they know which it is; the
+        // webhook has no way to tell those apart on its own.
+        leadSource: "INBOUND",
+        projectId: config.projectId,
+      }));
 
     const opportunity = await createOpportunity({
       name: `${attendee.name} — Free Consultation`,

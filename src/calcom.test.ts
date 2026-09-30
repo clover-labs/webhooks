@@ -1,6 +1,6 @@
 import { test, expect, beforeEach, afterEach, describe } from "bun:test";
 import { createHmac } from "node:crypto";
-import { verifySignature, extractCustomAnswers, dealTypeFromResponses, handleCalcomBooking } from "./calcom.ts";
+import { verifySignature, extractCustomAnswers, dealTypeFromResponses, handleCalcomBooking, companyDomain } from "./calcom.ts";
 
 const SECRET = "test-secret-do-not-use-in-prod";
 
@@ -109,11 +109,14 @@ function bookingPayload(overrides: Partial<{ triggerEvent: string; attendees: un
 }
 
 let originalFetch: typeof fetch;
-let calls: { method: string; url: string; body: unknown }[];
+let calls: { method: string; url: string; body: any }[];
+// Companies the domain lookup (GET /companies?filter=…) returns — empty unless a test sets it.
+let existingCompanies: { id: string; domainName: { primaryLinkUrl: string } }[];
 
 beforeEach(() => {
   originalFetch = globalThis.fetch;
   calls = [];
+  existingCompanies = [];
 });
 
 afterEach(() => {
@@ -125,6 +128,9 @@ function mockTwentySuccess() {
   globalThis.fetch = (async (url: string, init?: RequestInit) => {
     const body = init?.body ? JSON.parse(init.body as string) : undefined;
     calls.push({ method: init?.method ?? "GET", url: String(url), body });
+    if (String(url).includes("/companies?filter=")) {
+      return jsonRes({ data: { companies: existingCompanies } });
+    }
     if (String(url).endsWith("/companies")) {
       return jsonRes({ data: { createCompany: { id: "company-1" } } });
     }
@@ -200,9 +206,11 @@ describe("handleCalcomBooking", () => {
     const json = await res.json();
     expect(json).toEqual({ ok: true, companyId: "company-1", opportunityId: "opportunity-1" });
 
-    expect(calls.length).toBe(4);
-    const [companyCall, opportunityCall, noteCall, noteTargetCall] = calls;
+    expect(calls.length).toBe(5);
+    const [lookupCall, companyCall, opportunityCall, noteCall, noteTargetCall] = calls;
 
+    expect(lookupCall.method).toBe("GET");
+    expect(decodeURIComponent(lookupCall.url)).toContain("example.com");
     expect(companyCall.body).toMatchObject({ name: "Jane Doe", leadSource: "INBOUND", lifecycleStage: "PROSPECT" });
     expect(opportunityCall.body).toMatchObject({ companyId: "company-1", stage: "AWARENESS" });
     expect(opportunityCall.body).not.toHaveProperty("dealType");
@@ -221,7 +229,7 @@ describe("handleCalcomBooking", () => {
     const res = await handleCalcomBooking(req, { webhookSecret: SECRET });
     expect(res.status).toBe(200);
 
-    const [, opportunityCall, noteCall] = calls;
+    const [, , opportunityCall, noteCall] = calls; // [lookup, company, opportunity, note, …]
     expect(opportunityCall.body).toMatchObject({ stage: "AWARENESS", dealType: "SOCIAL_MEDIA_MANAGEMENT" });
     expect(noteCall.body.bodyV2.markdown).toContain("What do you need help with?: Market my product");
   });
@@ -236,7 +244,7 @@ describe("handleCalcomBooking", () => {
     });
     await handleCalcomBooking(req, { webhookSecret: SECRET, projectId: "TEST_PROJECT" });
 
-    const [companyCall, opportunityCall] = calls;
+    const [, companyCall, opportunityCall] = calls; // [lookup, company, opportunity, …]
     expect(companyCall.body).toMatchObject({ projectId: "TEST_PROJECT" });
     expect(opportunityCall.body).toMatchObject({ projectId: "TEST_PROJECT" });
   });
@@ -253,5 +261,59 @@ describe("handleCalcomBooking", () => {
     expect(res.status).toBe(502);
     const json = await res.json();
     expect(json.ok).toBe(false);
+  });
+});
+
+// ── duplicate companies (bug: "A duplicate entry was detected") ────────────
+// Twenty allows one Company per domain. Before this fix, the first gmail.com
+// booker claimed "gmail.com" and every later gmail.com booking was lost, and a
+// second booker from a known business domain was lost the same way.
+
+function signedBooking(email: string, name = "Jane Doe"): Request {
+  const body = bookingPayload({ attendees: [{ email, name, timeZone: "UTC" }] });
+  return new Request("http://localhost/calcom-booking", {
+    method: "POST",
+    body,
+    headers: { "x-cal-signature-256": sign(body) },
+  });
+}
+
+describe("companyDomain", () => {
+  test("free-mail addresses have no company domain", () => {
+    expect(companyDomain("someone@gmail.com")).toBeUndefined();
+    expect(companyDomain("someone@Outlook.com")).toBeUndefined();
+  });
+
+  test("business domains are kept, lowercased", () => {
+    expect(companyDomain("rocco@SouthBendMgmt.com")).toBe("southbendmgmt.com");
+  });
+});
+
+describe("handleCalcomBooking — duplicate companies", () => {
+  test("a gmail.com booker gets a Company without a domain, so they can't block the next gmail.com booker", async () => {
+    mockTwentySuccess();
+    const res = await handleCalcomBooking(signedBooking("jane@gmail.com"), { webhookSecret: SECRET });
+    expect(res.status).toBe(200);
+    expect(calls.some((c) => c.url.includes("/companies?filter="))).toBe(false);
+    const create = calls.find((c) => c.method === "POST" && c.url.endsWith("/companies"))!;
+    expect(create.body).not.toHaveProperty("domainName");
+  });
+
+  test("a second booker from a known business domain reuses that Company instead of failing", async () => {
+    mockTwentySuccess();
+    existingCompanies = [{ id: "existing-co", domainName: { primaryLinkUrl: "https://www.acme.com" } }];
+    const res = await handleCalcomBooking(signedBooking("bob@acme.com", "Bob"), { webhookSecret: SECRET });
+    expect(res.status).toBe(200);
+    expect((await res.json()).companyId).toBe("existing-co");
+    expect(calls.some((c) => c.method === "POST" && c.url.endsWith("/companies"))).toBe(false);
+    const opp = calls.find((c) => c.url.endsWith("/opportunities"))!;
+    expect(opp.body.companyId).toBe("existing-co");
+  });
+
+  test("a lookup hit on a look-alike domain (notacme.com) is not reused", async () => {
+    mockTwentySuccess();
+    existingCompanies = [{ id: "other-co", domainName: { primaryLinkUrl: "https://notacme.com" } }];
+    const res = await handleCalcomBooking(signedBooking("bob@acme.com", "Bob"), { webhookSecret: SECRET });
+    expect((await res.json()).companyId).toBe("company-1");
   });
 });

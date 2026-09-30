@@ -87,6 +87,28 @@ export async function createCompany(opts: {
   return extractCreated(res, "createCompany");
 }
 
+// Twenty enforces one Company per domain workspace-wide (creating a second
+// fails with "A duplicate entry was detected"), so callers look up first.
+// Filter syntax confirmed live 2026-09-30. `ilike` is a substring match
+// (stored values vary: "https://x.com", "https://www.x.com"), so the host is
+// re-checked exactly here. The workspace is shared across ventures, so the
+// match may belong to another project — reusing it is still right, since a
+// second Company for that domain can't exist anyway.
+export async function findCompanyByDomain(domain: string): Promise<{ id: string } | null> {
+  const filter = encodeURIComponent(`domainName.primaryLinkUrl[ilike]:"%${domain}%"`);
+  const res = await api("GET", `/companies?filter=${filter}&limit=20`);
+  const companies: { id: string; domainName?: { primaryLinkUrl?: string } }[] = res?.data?.companies ?? [];
+  return companies.find((c) => hostOf(c.domainName?.primaryLinkUrl) === domain.toLowerCase()) ?? null;
+}
+
+function hostOf(url: string | undefined): string {
+  return (url ?? "")
+    .toLowerCase()
+    .replace(/^[a-z]+:\/\//, "")
+    .replace(/^www\./, "")
+    .split(/[/?#]/)[0]!;
+}
+
 export async function createOpportunity(opts: {
   name: string;
   companyId: string;
