@@ -10,18 +10,23 @@ have started with a Reddit integration and now also handles CRM lead intake.
 
 | Path | Description |
 |------|-------------|
-| `src/` | Webhook server — `POST /post` (Reddit cross-post bridge, submits/crossposts to Reddit) and `POST /calcom-booking` (Cal.com "Booking created" → creates a Company + Opportunity in Twenty CRM). One deployable unit; each concern gets its own file (`reddit.ts`, `calcom.ts`, `twenty.ts`), `index.ts` is a thin router. |
+| `src/` | Webhook server — `POST /post` (Reddit cross-post bridge, submits/crossposts to Reddit), `POST /calcom-booking` (Cal.com "Booking created" → creates a Company + Opportunity in Twenty CRM), and client questionnaires on `start.cloverlabs.dev/<client>` (`brief.ts` + `brief.html`, one data file per client in `briefs/`; answers → Note on the client's Opportunity + email via SES, `ses.ts`). One deployable unit; each concern gets its own file, `index.ts` is a thin router (routes `start.cloverlabs.dev` by Host). |
 | [`apps/sub-bridge/`](apps/sub-bridge/CLAUDE.md) | SubBridge — Devvit mod panel for scheduling and cross-posting across subreddits |
 | `apps/klub-kgb/` | Klub KGB Reddit presence (placeholder — no code yet) |
 
 ## Deployment
 
-Coolify app `webhooks` (project `clawd`) builds `src/` directly from
-`clover-labs/webhooks@main` → `post.cloverlabs.dev`. Push to `main` to deploy;
+Coolify app `webhooks` (project `clawd`, clab-app Coolify on 95.216.156.14 — `clab` CLI
+`default` profile via SSH tunnel `localhost:18000`) builds `src/` directly from
+`clover-labs/webhooks@main` → `post.cloverlabs.dev` + `start.cloverlabs.dev`
+(DNS: the `*.cloverlabs.dev` wildcard). Push to `main` to deploy;
 no separate build step. Env vars (`WEBHOOK_SECRET`, `REDDIT_CLIENT_ID`,
 `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`,
 `REDDIT_HOME_SUBREDDIT`, `CALCOM_WEBHOOK_SECRET`, `TWENTY_API_URL`,
-`TWENTY_API_TOKEN`) are set in Coolify, not committed anywhere.
+`TWENTY_API_TOKEN`, `SES_ACCESS_KEY_ID`, `SES_SECRET_ACCESS_KEY`, `SES_REGION`,
+`SES_FROM_ADDRESS`, `BRIEF_NOTIFY_TO`) are set in Coolify, not committed anywhere.
+SES keys: IAM user `cloverlabs-smtp` (cloverlabs.dev identity only), Infisical
+`clab-ops` `/cloverlabs-ses`. `BRIEF_HOST=localhost` serves the briefs locally.
 
 ## Shared Context
 
