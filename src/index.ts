@@ -12,6 +12,10 @@
  *   Cal.com "Booking created" webhook payload (blendor-clover/30-min event type)
  *   Creates a Company + Opportunity in Twenty CRM for the booking's attendee.
  *
+ * start.cloverlabs.dev/:slug  (any method, routed by Host — see brief.ts)
+ *   Client questionnaire page + its submit endpoint. BRIEF_HOST overrides the
+ *   host for local dev (e.g. BRIEF_HOST=localhost).
+ *
  * Env vars:
  *   WEBHOOK_SECRET, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET,
  *   REDDIT_USERNAME, REDDIT_PASSWORD, REDDIT_HOME_SUBREDDIT,
@@ -20,12 +24,14 @@
 
 import { loadEnv, getAccessToken, submitPost, crosspostTo } from "./reddit.ts";
 import { handleCalcomBooking as handleCalcomBookingRequest } from "./calcom.ts";
+import { handleBrief } from "./brief.ts";
 
 loadEnv();
 
 const PORT = Number(process.env.PORT ?? 3000);
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const CALCOM_WEBHOOK_SECRET = process.env.CALCOM_WEBHOOK_SECRET;
+const BRIEF_HOST = process.env.BRIEF_HOST ?? "start.cloverlabs.dev";
 
 if (!WEBHOOK_SECRET) {
   console.error("Error: WEBHOOK_SECRET must be set");
@@ -46,7 +52,9 @@ type CrosspostResult = { subreddit: string; url: string } | { subreddit: string;
 Bun.serve({
   port: PORT,
   async fetch(req) {
-    const { pathname } = new URL(req.url);
+    const { pathname, hostname } = new URL(req.url);
+
+    if (hostname === BRIEF_HOST) return handleBrief(req);
 
     if (req.method === "POST" && pathname === "/post") return handleRedditPost(req);
     if (req.method === "POST" && pathname === "/calcom-booking") return handleCalcomBooking(req);

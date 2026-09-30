@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<script>try { const t = localStorage.getItem("brief:theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Clover Labs tokens, from cloverlabs.io/styles/main.css (the site has no dark mode; dark values derived from --ink). */
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #69727d; --line: #e6e6e6; --card: #ffffff;
+    --accent: #4ead43; --accent-hover: #3c8f33; --accent-soft: #4ead431f; --danger: #c2410c;
+    --font-head: "Poppins", Helvetica, Arial, sans-serif; --font-body: "Roboto", Helvetica, Arial, sans-serif; --radius: 6px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #121512; --fg: #f0f0f0; --muted: #9aa39b; --line: #2b322c; --card: #1a1f1a; --accent-hover: #5fc053; --accent-soft: #4ead432e; --danger: #fb923c; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #121512; --fg: #f0f0f0; --muted: #9aa39b; --line: #2b322c; --card: #1a1f1a; --accent-hover: #5fc053; --accent-soft: #4ead432e; --danger: #fb923c; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--bg); color: var(--fg); font: 17px/1.55 var(--font-body); transition: background .2s, color .2s; -webkit-font-smoothing: antialiased; }
+  .progress { position: fixed; inset: 0 0 auto; height: 4px; background: var(--line); z-index: 2; }
+  .progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .35s ease; }
+  header { position: fixed; top: 4px; left: 0; right: 0; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--muted); background: var(--bg); z-index: 1; }
+  .logo { display: flex; align-items: center; gap: 8px; font: 600 18px var(--font-head); color: var(--fg); text-decoration: none; }
+  .logo img { width: 26px; height: 26px; }
+  .right { display: flex; align-items: center; gap: 14px; }
+  .theme { font: inherit; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--fg); cursor: pointer; display: grid; place-items: center; }
+  .theme:hover { border-color: var(--accent); }
+  main { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 96px 16px 120px; }
+  .screen { width: 100%; max-width: 640px; animation: in .35s ease both; }
+  .screen.back { animation-name: in-back; }
+  @keyframes in { from { opacity: 0; transform: translateY(24px); } }
+  @keyframes in-back { from { opacity: 0; transform: translateY(-24px); } }
+  .section { font-size: 14px; color: var(--accent); font-weight: 600; margin-bottom: 10px; }
+  .section span { color: var(--muted); font-weight: 400; }
+  h1 { font-family: var(--font-head); font-size: clamp(26px, 5vw, 36px); line-height: 1.2; font-weight: 600; margin: 0 0 12px; letter-spacing: -.01em; }
+  h2 { font-family: var(--font-head); font-size: clamp(21px, 4.2vw, 27px); line-height: 1.3; font-weight: 500; margin: 0 0 8px; }
+  .help { color: var(--muted); margin: 0 0 20px; }
+  .req { color: var(--accent); }
+  input[type=text], input[type=url], textarea {
+    width: 100%; border: 0; border-bottom: 2px solid var(--line); background: transparent; color: var(--fg);
+    font: inherit; font-size: 22px; padding: 8px 0; outline: none; resize: none; margin-top: 12px;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  textarea { min-height: 3.2em; }
+  .options { display: grid; gap: 10px; margin-top: 16px; max-width: 460px; }
+  .opt {
+    display: flex; align-items: center; gap: 12px; text-align: left; font: inherit; color: var(--fg);
+    background: var(--card); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 12px 14px; cursor: pointer;
+  }
+  .opt:hover { border-color: var(--accent); }
+  .opt.on { border-color: var(--accent); background: var(--accent-soft); }
+  .key { flex: none; width: 24px; height: 24px; border: 1.5px solid var(--line); border-radius: 5px; display: grid; place-items: center; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .opt.on .key { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .actions { display: flex; align-items: center; gap: 14px; margin-top: 28px; }
+  .btn { font: 500 16px var(--font-head); border: 0; border-radius: var(--radius); padding: 11px 20px; background: var(--accent); color: #fff; cursor: pointer; }
+  .btn:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .hint { font-size: 13px; color: var(--muted); }
+  .error { color: var(--danger); font-size: 14px; margin-top: 12px; min-height: 1.4em; }
+  nav { position: fixed; right: 16px; bottom: 16px; display: flex; gap: 2px; }
+  nav button { font: inherit; width: 44px; height: 40px; border: 0; background: var(--accent); color: #fff; cursor: pointer; font-size: 18px; }
+  nav button:hover:not(:disabled) { background: var(--accent-hover); }
+  nav button:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+  nav button:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+  nav button:disabled { opacity: .35; cursor: default; }
+  .review { margin: 20px 0 0; padding: 0; list-style: none; }
+  .review h3 { font-size: 14px; color: var(--accent); margin: 22px 0 6px; }
+  .review button { display: block; width: 100%; text-align: left; font: inherit; color: var(--fg); background: none; border: 0; border-bottom: 1px solid var(--line); padding: 10px 0; cursor: pointer; }
+  .review button:hover .q { color: var(--accent); }
+  .review .q { font-size: 14px; color: var(--muted); display: block; }
+  .review .a { white-space: pre-wrap; }
+  .review .a.empty { color: var(--muted); font-style: italic; }
+  .hp { position: absolute; left: -9999px; }
+  @media (max-width: 520px) { body { font-size: 16px; } input[type=text], input[type=url], textarea { font-size: 19px; } .hint { display: none; } }
+</style>
+</head>
+<body>
+<div class="progress"><i id="bar"></i></div>
+<header><a class="logo" href="https://cloverlabs.io" target="_blank" rel="noopener"><img alt="" src="data:image/png;base64,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">Clover Labs</a><div class="right"><span id="count"></span><button class="theme" id="theme" aria-label="Switch light/dark mode"></button></div></header>
+<main id="main"></main>
+<nav><button id="prev" aria-label="Previous">↑</button><button id="next" aria-label="Next">↓</button></nav>
+<input class="hp" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+<script type="application/json" id="config">__CONFIG__</script>
+<script>
+(() => {
+  const brief = JSON.parse(document.getElementById("config").textContent);
+  const KEY = "brief:" + brief.slug;
+  const LETTERS = "ABCDEFGHIJ";
+
+  // Screens: welcome → one per field → review → done
+  const fields = [];
+  brief.sections.forEach((s, si) => s.fields.forEach((f) => fields.push({ ...f, section: s.title, si })));
+  const screens = [{ kind: "welcome" }, ...fields.map((f) => ({ kind: "field", f })), { kind: "review" }, { kind: "done" }];
+  const REVIEW = screens.length - 2;
+
+  // `sent` is kept after sending so people can come back, change something and send an update.
+  let answers = {}, index = 0, sent = false, fromReview = false;
+  try { const saved = JSON.parse(localStorage.getItem(KEY)); if (saved) ({ answers, index, sent = false } = saved); } catch {}
+  if (!(index >= 0 && index <= (sent ? REVIEW + 1 : REVIEW))) index = 0;
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ answers, index, sent })); } catch {} };
+
+  const $main = document.getElementById("main");
+  const $prev = document.getElementById("prev");
+  const $next = document.getElementById("next");
+  const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n; };
+  const empty = (a) => a === undefined || (Array.isArray(a) ? a.length === 0 : String(a).trim() === "");
+
+  function go(to, dir = to > index ? 1 : -1) {
+    if (to < 0 || to > REVIEW) return;
+    index = to; save(); render(dir);
+  }
+
+  function next() {
+    const s = screens[index];
+    if (s.kind === "field" && s.f.required && empty(answers[s.f.id])) return showError("Please fill this in.");
+    if (fromReview) { fromReview = false; return go(REVIEW); }
+    go(index + 1);
+  }
+
+  function showError(msg) { const e = $main.querySelector(".error"); if (e) e.textContent = msg; }
+
+  function render(dir = 1) {
+    const s = screens[index];
+    const node = el("div", { className: "screen" + (dir < 0 ? " back" : "") });
+    ({ welcome, field, review, done })[s.kind](node, s);
+    $main.replaceChildren(node);
+
+    const pos = s.kind === "field" ? fields.indexOf(s.f) + 1 : s.kind === "welcome" ? 0 : fields.length;
+    document.getElementById("bar").style.width = (pos / fields.length) * 100 + "%";
+    document.getElementById("count").textContent = s.kind === "field" ? `${pos} of ${fields.length}` : "";
+    $prev.disabled = index === 0 || s.kind === "done";
+    $next.disabled = index >= REVIEW;
+    node.querySelector("input, textarea")?.focus({ preventScroll: true });
+  }
+
+  function welcome(node) {
+    node.append(
+      el("div", { className: "section", textContent: brief.company }),
+      el("h1", { textContent: brief.title }),
+      el("p", { className: "help", textContent: brief.intro }),
+      el("div", { className: "actions" }, el("button", { className: "btn", textContent: Object.keys(answers).length ? "Continue" : "Start", onclick: next }), el("span", { className: "hint", textContent: "press Enter ↵" })),
+    );
+  }
+
+  function field(node, { f }) {
+    const n = brief.sections.length;
+    node.append(
+      el("div", { className: "section" }, `${f.si + 1} · ${f.section} `, el("span", { textContent: `(section ${f.si + 1} of ${n})` })),
+      el("h2", {}, f.label, ...(f.required ? [el("span", { className: "req", textContent: " *" })] : [])),
+    );
+    if (f.help) node.append(el("p", { className: "help", textContent: f.help }));
+
+    if (f.type === "single" || f.type === "multi") {
+      const opts = el("div", { className: "options" });
+      f.options.forEach((o, i) => {
+        const on = f.type === "single" ? answers[f.id] === o : (answers[f.id] || []).includes(o);
+        opts.append(el("button", { className: "opt" + (on ? " on" : ""), onclick: () => pick(f, o) }, el("span", { className: "key", textContent: LETTERS[i] }), o));
+      });
+      node.append(opts);
+    } else {
+      const input = f.type === "long"
+        ? el("textarea", { rows: 3, placeholder: "Type your answer here…" })
+        : el("input", { type: f.type === "url" ? "url" : "text", placeholder: f.placeholder || "Type your answer here…" });
+      input.value = answers[f.id] || "";
+      input.oninput = () => {
+        answers[f.id] = input.value; save();
+        if (input.tagName === "TEXTAREA") { input.style.height = "auto"; input.style.height = input.scrollHeight + "px"; }
+      };
+      node.append(input);
+    }
+
+    const hint = f.type === "long" ? "Shift + Enter for a new line" : f.type === "single" ? "or press a letter" : f.type === "multi" ? "choose as many as you like" : "press Enter ↵";
+    node.append(
+      el("div", { className: "actions" }, el("button", { className: "btn", textContent: fromReview ? "Back to review" : "OK", onclick: next }), el("span", { className: "hint", textContent: hint })),
+      el("div", { className: "error" }),
+    );
+  }
+
+  function pick(f, o) {
+    if (f.type === "single") {
+      answers[f.id] = answers[f.id] === o ? undefined : o; save(); render(0);
+      if (answers[f.id]) setTimeout(next, 280);
+    } else {
+      const cur = answers[f.id] || [];
+      answers[f.id] = cur.includes(o) ? cur.filter((x) => x !== o) : [...cur, o]; save(); render(0);
+    }
+  }
+
+  function review(node) {
+    const list = el("div", { className: "review" });
+    brief.sections.forEach((s, si) => {
+      list.append(el("h3", { textContent: `${si + 1} · ${s.title}` }));
+      s.fields.forEach((f) => {
+        const a = answers[f.id];
+        const text = empty(a) ? "Skipped" : Array.isArray(a) ? a.join(", ") : a;
+        list.append(el("button", { onclick: () => { fromReview = true; go(screens.findIndex((x) => x.f === fields.find((y) => y.id === f.id)), -1); } },
+          el("span", { className: "q", textContent: f.label }), el("span", { className: "a" + (empty(a) ? " empty" : ""), textContent: text })));
+      });
+    });
+    const label = sent ? "Send update" : "Send answers";
+    const btn = el("button", { className: "btn", textContent: label, onclick: () => send(btn, label) });
+    node.append(
+      el("h1", { textContent: "Check your answers" }),
+      el("p", { className: "help", textContent: sent ? "You've sent these already. Change what you need, then send the update." : "Click any answer to change it." }),
+      list,
+      el("div", { className: "actions" }, btn),
+      el("div", { className: "error" }),
+    );
+  }
+
+  async function send(btn, label) {
+    btn.disabled = true; btn.textContent = "Sending…";
+    try {
+      const res = await fetch(location.pathname, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers, update: sent, website: document.getElementById("website").value }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) throw new Error(body.error || res.status);
+      sent = true; index = REVIEW + 1; save(); render(1);
+    } catch (e) {
+      btn.disabled = false; btn.textContent = label;
+      showError("Something went wrong, please try again. Your answers are saved on this device.");
+    }
+  }
+
+  function done(node) {
+    node.append(
+      el("h1", { textContent: "Thank you" + (answers.name ? ", " + String(answers.name).split(" ")[0] : "") + "." }),
+      el("p", { className: "help", textContent: "We've got your answers. We'll go through them and come back to you with a plan." }),
+      el("div", { className: "actions" }, el("button", { className: "btn", textContent: "Change something", onclick: () => go(REVIEW, -1) })),
+    );
+  }
+
+  // Theme: follows the system until the viewer picks one, then remembered on this device.
+  const $theme = document.getElementById("theme");
+  const isDark = () => (document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+  const paintToggle = () => { $theme.textContent = isDark() ? "☀" : "☾"; };
+  $theme.onclick = () => {
+    const t = isDark() ? "light" : "dark";
+    document.documentElement.dataset.theme = t; paintToggle();
+    try { localStorage.setItem("brief:theme", t); } catch {}
+  };
+  paintToggle();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paintToggle);
+
+  $prev.onclick = () => { fromReview = false; go(index - 1, -1); };
+  $next.onclick = next;
+
+  document.addEventListener("keydown", (e) => {
+    const s = screens[index];
+    const t = e.target;
+    if (e.key === "Enter" && !(t.tagName === "TEXTAREA" && e.shiftKey) && !(t.tagName === "BUTTON")) {
+      if (s.kind === "review" || s.kind === "done") return;
+      e.preventDefault(); return next();
+    }
+    // Arrows move between questions, except inside a textarea where they move the cursor.
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && t.tagName !== "TEXTAREA" && s.kind !== "done") {
+      e.preventDefault();
+      if (e.key === "ArrowUp") { fromReview = false; return go(index - 1, -1); }
+      return next();
+    }
+    if (s.kind === "field" && s.f.options && !/INPUT|TEXTAREA/.test(t.tagName) && !e.metaKey && !e.ctrlKey) {
+      const i = LETTERS.indexOf(e.key.toUpperCase());
+      if (i >= 0 && i < s.f.options.length) pick(s.f, s.f.options[i]);
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
