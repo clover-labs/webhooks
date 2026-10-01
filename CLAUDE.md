@@ -19,8 +19,9 @@ have started with a Reddit integration and now also handles CRM lead intake.
 Coolify app `webhooks` (project `clawd`, clab-app Coolify on 95.216.156.14 — `clab` CLI
 `default` profile via SSH tunnel `localhost:18000`) builds `src/` directly from
 `clover-labs/webhooks@main` → `post.cloverlabs.dev` + `start.cloverlabs.dev`
-(DNS: the `*.cloverlabs.dev` wildcard). Push to `main` to deploy;
-no separate build step. Env vars (`WEBHOOK_SECRET`, `REDDIT_CLIENT_ID`,
+(DNS: the `*.cloverlabs.dev` wildcard). Pushing to `main` does NOT deploy:
+trigger it in Coolify (Redeploy, or API `GET /deploy?uuid=ogwgs4wgkkccssscg4kgk40g`).
+No separate build step. Env vars (`WEBHOOK_SECRET`, `REDDIT_CLIENT_ID`,
 `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`,
 `REDDIT_HOME_SUBREDDIT`, `CALCOM_WEBHOOK_SECRET`, `TWENTY_API_URL`,
 `TWENTY_API_TOKEN`, `SES_ACCESS_KEY_ID`, `SES_SECRET_ACCESS_KEY`, `SES_REGION`,
