@@ -284,6 +284,17 @@ describe("companyDomain", () => {
     expect(companyDomain("someone@Outlook.com")).toBeUndefined();
   });
 
+  test("country variants of free-mail providers have no company domain either (Alisha booked from outlook.in)", () => {
+    expect(companyDomain("someone@outlook.in")).toBeUndefined();
+    expect(companyDomain("someone@yahoo.co.uk")).toBeUndefined();
+    expect(companyDomain("someone@hotmail.fr")).toBeUndefined();
+  });
+
+  test("a business whose name merely contains a provider name keeps its domain", () => {
+    expect(companyDomain("jo@outlookstudio.com")).toBe("outlookstudio.com");
+    expect(companyDomain("jo@mail.gmailtools.io")).toBe("mail.gmailtools.io");
+  });
+
   test("business domains are kept, lowercased", () => {
     expect(companyDomain("rocco@SouthBendMgmt.com")).toBe("southbendmgmt.com");
   });

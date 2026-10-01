@@ -102,10 +102,15 @@ const PERSONAL_EMAIL_DOMAINS = new Set([
   "zoho.com", "yandex.com", "hey.com", "fastmail.com", "siol.net", "t-2.net", "amis.net",
 ]);
 
+// Providers with country variants (outlook.in, yahoo.co.uk, hotmail.fr, gmx.at):
+// matched on the first label, whatever the ending. Add names here as they turn up.
+const PERSONAL_EMAIL_PROVIDERS = new Set(["gmail", "googlemail", "outlook", "hotmail", "yahoo", "ymail", "gmx", "icloud"]);
+
 /** The company domain for a booker's email, or undefined for free-mail addresses. */
 export function companyDomain(email: string): string | undefined {
   const domain = email.split("@")[1]?.trim().toLowerCase();
   if (!domain || PERSONAL_EMAIL_DOMAINS.has(domain)) return undefined;
+  if (PERSONAL_EMAIL_PROVIDERS.has(domain.split(".")[0]!)) return undefined;
   return domain;
 }
 
